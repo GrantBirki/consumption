@@ -4,13 +4,14 @@ import { getRuntimeTuning } from "../src/lib/perf.js";
 
 test("getRuntimeTuning returns the potato-safe timing profile", () => {
   expect(getRuntimeTuning()).toEqual({
-    pointerCooldownMs: 24,
-    presentationCooldownMs: 180,
+    pointerCooldownMs: 56,
+    pointerActiveWindowMs: 120,
+    presentationCooldownMs: 280,
     layoutIntervalMs: 3400,
-    layoutIdleResetMs: 260,
-    flashIntervalMs: 7000,
-    flashDurationMs: 300,
-    minFrameIntervalMs: 32,
+    layoutIdleResetMs: 240,
+    flashIntervalMs: 7200,
+    flashDurationMs: 280,
+    minFrameIntervalMs: 60,
   });
 });
 
