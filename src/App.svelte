@@ -18,6 +18,7 @@
     getLayoutMode,
   } from "./lib/badness.js";
   import { getRuntimeTuning } from "./lib/perf.js";
+  import { resolveStickyHeadLimit } from "./lib/device.js";
 
   const siteName = "consumption";
   const heroWordmark = "c o n s u m p t i o n";
@@ -36,7 +37,6 @@
     scrollRatio: 0,
     phase: 0,
   });
-  const STICKY_HEAD_LIMIT = 10;
   const BSOD_DURATION_MS = 8000;
   const STICKY_HEAD_BASE_SIZE_REM = 8;
   const STICKY_HEAD_SIZE_STEP_REM = 4;
@@ -130,6 +130,11 @@
   onMount(() => {
     const tuning = getRuntimeTuning();
     const now = () => globalThis.performance?.now?.() ?? Date.now();
+    const stickyHeadLimit = resolveStickyHeadLimit({
+      userAgent: globalThis.navigator?.userAgent ?? "",
+      viewportWidth: globalThis.innerWidth || 1024,
+      hasCoarsePointer: globalThis.matchMedia?.("(pointer: coarse)")?.matches ?? false,
+    });
 
     let chaos = createChaosState();
     let lastPoint = null;
@@ -382,7 +387,7 @@
       clickCount = nextCount;
       stickyHeads = [...stickyHeads, createStickyHead(nextCount - 1)];
 
-      if (nextCount >= STICKY_HEAD_LIMIT) {
+      if (nextCount >= stickyHeadLimit) {
         triggerBsod();
       }
     };
