@@ -1,5 +1,6 @@
 const MIN_ENERGY = 0.06;
 const MIN_SCATTER = 8;
+const SETTLED_EPSILON = 0.015;
 
 export function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -51,46 +52,47 @@ export function applyPointerMove(state, event) {
   const pointer = normalizePointer(event.point, event.bounds);
   const dx = event.delta?.x ?? 0;
   const dy = event.delta?.y ?? 0;
-  const travel = Math.max(1, Math.hypot(dx, dy));
-  const impulse = clamp(travel / 22, 0.08, 1);
-  const hueJump = 9 + travel * 18 + Math.abs(pointer.x) * 140 + Math.abs(pointer.y) * 110;
+  const travel = Math.hypot(dx, dy);
+  const effectiveTravel = Math.max(0, travel - 1.5);
+  const impulse = clamp(effectiveTravel / 28, 0.03, 0.85);
+  const hueJump = 5 + effectiveTravel * 9 + Math.abs(pointer.x) * 92 + Math.abs(pointer.y) * 76;
   const scatterTarget = clamp(
-    MIN_SCATTER + travel * 1.9 + (Math.abs(pointer.x) + Math.abs(pointer.y)) * 18,
+    MIN_SCATTER + effectiveTravel * 1.1 + (Math.abs(pointer.x) + Math.abs(pointer.y)) * 12,
     MIN_SCATTER,
-    72
+    54
   );
-  const tiltTargetX = clamp(pointer.y * -28 + dy * 0.45, -68, 68);
-  const tiltTargetY = clamp(pointer.x * 28 + dx * 0.45, -68, 68);
-  const wobbleTarget = clamp(4 + travel * 0.7 + Math.abs(pointer.x - pointer.y) * 10, 0, 36);
+  const tiltTargetX = clamp(pointer.y * -22 + dy * 0.28, -56, 56);
+  const tiltTargetY = clamp(pointer.x * 22 + dx * 0.28, -56, 56);
+  const wobbleTarget = clamp(3 + effectiveTravel * 0.34 + Math.abs(pointer.x - pointer.y) * 8, 0, 24);
 
   return {
     ...state,
     pointerX: pointer.x,
     pointerY: pointer.y,
-    hue: wrapHue(state.hue + hueJump * 0.65),
+    hue: wrapHue(state.hue + hueJump * 0.4),
     targetHue: wrapHue(state.targetHue + hueJump),
-    energy: clamp(state.energy + impulse * 0.35, 0, 1),
-    targetEnergy: clamp(state.targetEnergy + impulse * 0.65, 0.18, 1),
-    scatter: clamp(state.scatter + travel * 0.4, MIN_SCATTER, 72),
+    energy: clamp(state.energy + impulse * 0.24, 0, 1),
+    targetEnergy: clamp(state.targetEnergy + impulse * 0.42, 0.14, 0.92),
+    scatter: clamp(state.scatter + effectiveTravel * 0.18, MIN_SCATTER, 54),
     targetScatter: scatterTarget,
-    tiltX: clamp(state.tiltX + tiltTargetX * 0.25, -68, 68),
+    tiltX: clamp(state.tiltX + tiltTargetX * 0.18, -56, 56),
     targetTiltX: tiltTargetX,
-    tiltY: clamp(state.tiltY + tiltTargetY * 0.25, -68, 68),
+    tiltY: clamp(state.tiltY + tiltTargetY * 0.18, -56, 56),
     targetTiltY: tiltTargetY,
-    wobble: clamp(state.wobble + impulse * 8, 0, 36),
+    wobble: clamp(state.wobble + impulse * 4.2, 0, 24),
     targetWobble: wobbleTarget,
   };
 }
 
 export function tickChaos(state, dtSeconds) {
   const dt = clamp(dtSeconds, 0, 0.05);
-  const mix = 1 - Math.exp(-dt * 7.5);
-  const settle = 1 - Math.exp(-dt * 2.4);
-  const targetEnergy = Math.max(MIN_ENERGY, state.targetEnergy - dt * 0.95);
-  const targetScatter = Math.max(MIN_SCATTER, state.targetScatter - dt * 28);
+  const mix = 1 - Math.exp(-dt * 10);
+  const settle = 1 - Math.exp(-dt * 4.5);
+  const targetEnergy = Math.max(MIN_ENERGY, state.targetEnergy - dt * 1.7);
+  const targetScatter = Math.max(MIN_SCATTER, state.targetScatter - dt * 42);
   const targetTiltX = state.targetTiltX * (1 - settle);
   const targetTiltY = state.targetTiltY * (1 - settle);
-  const targetWobble = Math.max(0, state.targetWobble - dt * 18);
+  const targetWobble = Math.max(0, state.targetWobble - dt * 28);
 
   return {
     ...state,
@@ -132,3 +134,17 @@ export function buildChaosVars(state) {
   };
 }
 
+export function isChaosSettled(state) {
+  return (
+    Math.abs(state.energy - MIN_ENERGY) < SETTLED_EPSILON &&
+    Math.abs(state.targetEnergy - MIN_ENERGY) < SETTLED_EPSILON &&
+    Math.abs(state.scatter - MIN_SCATTER) < 0.4 &&
+    Math.abs(state.targetScatter - MIN_SCATTER) < 0.4 &&
+    Math.abs(state.tiltX) < 0.5 &&
+    Math.abs(state.targetTiltX) < 0.5 &&
+    Math.abs(state.tiltY) < 0.5 &&
+    Math.abs(state.targetTiltY) < 0.5 &&
+    Math.abs(state.wobble) < 0.4 &&
+    Math.abs(state.targetWobble) < 0.4
+  );
+}

@@ -6,12 +6,14 @@
     applyPointerMove,
     buildChaosVars,
     createChaosState,
+    isChaosSettled,
     tickChaos,
   } from "./lib/chaos.js";
 
   const siteName = "consumption.horse";
   const description =
     "A maximalist cursor-reactive web artwork that scrambles the palette with every movement.";
+  const POINTER_COOLDOWN_MS = 10;
   const wallpaperRows = Array.from({ length: 7 }, () => "C O N S U M P T I O N");
   const marqueeBursts = [
     "retina tax in progress / chromatic debt increasing / cursor panic live",
@@ -45,13 +47,24 @@
   onMount(() => {
     let chaos = createChaosState();
     let lastPoint = null;
+    let pendingPointerMove = null;
     let frameHandle = 0;
     let lastTime = globalThis.performance?.now?.() ?? Date.now();
+    let loopActive = false;
+    let nextPointerAt = 0;
 
     const requestFrame =
       globalThis.requestAnimationFrame ??
       ((callback) => globalThis.setTimeout(() => callback(Date.now()), 16));
     const cancelFrame = globalThis.cancelAnimationFrame ?? globalThis.clearTimeout;
+
+    const scheduleStep = () => {
+      if (loopActive) return;
+
+      loopActive = true;
+      lastTime = globalThis.performance?.now?.() ?? Date.now();
+      frameHandle = requestFrame(step);
+    };
 
     const applyVars = () => {
       if (!stage) return;
@@ -82,37 +95,64 @@
 
     const handlePointerMove = (event) => {
       const bounds = getBounds();
-      const point = {
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
+      pendingPointerMove = {
+        point: {
+          x: event.clientX - bounds.left,
+          y: event.clientY - bounds.top,
+        },
+        bounds,
       };
-      const delta = lastPoint
-        ? { x: point.x - lastPoint.x, y: point.y - lastPoint.y }
-        : { x: 0, y: 0 };
-
-      lastPoint = point;
-      chaos = applyPointerMove(chaos, { point, delta, bounds });
-      applyVars();
+      scheduleStep();
     };
 
     const resetPointer = () => {
       lastPoint = null;
+      pendingPointerMove = null;
     };
 
     const step = (timestamp) => {
+      loopActive = false;
       const now = Number.isFinite(timestamp) ? timestamp : Date.now();
       const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
+      let needsAnotherFrame = false;
+
+      if (pendingPointerMove && now >= nextPointerAt) {
+        const delta = lastPoint
+          ? {
+              x: pendingPointerMove.point.x - lastPoint.x,
+              y: pendingPointerMove.point.y - lastPoint.y,
+            }
+          : { x: 0, y: 0 };
+
+        lastPoint = pendingPointerMove.point;
+        chaos = applyPointerMove(chaos, {
+          point: pendingPointerMove.point,
+          delta,
+          bounds: pendingPointerMove.bounds,
+        });
+        pendingPointerMove = null;
+        nextPointerAt = now + POINTER_COOLDOWN_MS;
+      } else if (pendingPointerMove) {
+        needsAnotherFrame = true;
+      }
+
       chaos = tickChaos(chaos, dt);
       applyVars();
-      frameHandle = requestFrame(step);
+
+      if (pendingPointerMove || !isChaosSettled(chaos)) {
+        needsAnotherFrame = true;
+      }
+
+      if (needsAnotherFrame) {
+        scheduleStep();
+      }
     };
 
     applyVars();
     globalThis.addEventListener("pointermove", handlePointerMove, { passive: true });
     globalThis.addEventListener("pointerleave", resetPointer);
     globalThis.addEventListener("blur", resetPointer);
-    frameHandle = requestFrame(step);
 
     return () => {
       cancelFrame(frameHandle);
@@ -170,7 +210,7 @@
   <main class="dashboard">
     <section class="panel panel--hero">
       <p class="kicker">browser abuse engine / live palette vandalism / soft usability ban</p>
-      <h1>consumption.horse</h1>
+      <h1>c o n s u m p t i o n</h1>
       <p class="lede">
         Every cursor tremor detonates the color system. The palette only settles after the
         pointer fully stops, which is the closest this artwork gets to mercy.
@@ -183,10 +223,10 @@
 
     <section class="panel panel--meter">
       <p class="label">Damage model</p>
-      <p class="meter">1 pixel = full chromatic panic</p>
+      <p class="meter">tiny motion = buffered chromatic panic</p>
       <p>
-        Tiny movements snap the entire surface into a new hue stack. Stillness is the only
-        de-escalation path.
+        Tiny movements still scramble the surface, but the input is now lightly buffered so the
+        site is obnoxious without burning cycles for no reason.
       </p>
     </section>
 

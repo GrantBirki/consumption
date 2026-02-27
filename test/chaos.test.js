@@ -4,6 +4,7 @@ import {
   applyPointerMove,
   buildChaosVars,
   createChaosState,
+  isChaosSettled,
   normalizePointer,
   tickChaos,
   wrapHue,
@@ -54,6 +55,22 @@ test("tickChaos settles the energy and motion toward calmer values", () => {
   expect(state.scatter).toBeLessThan(energized.scatter);
   expect(state.wobble).toBeLessThan(energized.wobble);
   expect(Math.abs(state.tiltX)).toBeLessThan(Math.abs(energized.tiltX));
+});
+
+test("tickChaos eventually reaches a settled state", () => {
+  let state = applyPointerMove(createChaosState(), {
+    point: { x: 380, y: 20 },
+    delta: { x: 70, y: -50 },
+    bounds: { width: 400, height: 300 },
+  });
+
+  expect(isChaosSettled(state)).toBe(false);
+
+  for (let index = 0; index < 240; index += 1) {
+    state = tickChaos(state, 1 / 60);
+  }
+
+  expect(isChaosSettled(state)).toBe(true);
 });
 
 test("buildChaosVars returns CSS custom properties without NaN values", () => {

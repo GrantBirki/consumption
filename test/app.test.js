@@ -1,12 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import App from "../src/App.svelte";
 
 test("App renders the maximalist artwork shell", () => {
   const { container } = render(App);
 
-  expect(screen.getByRole("heading", { level: 1, name: "consumption.horse" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "c o n s u m p t i o n" })).toBeInTheDocument();
   expect(screen.getAllByText("C O N S U M P T I O N")).toHaveLength(7);
   expect(screen.getByText(/browser abuse engine/i)).toBeInTheDocument();
   expect(container.querySelectorAll(".floater__image")).toHaveLength(6);
@@ -14,26 +14,45 @@ test("App renders the maximalist artwork shell", () => {
 });
 
 test("App updates chaos CSS variables on pointer movement", async () => {
-  render(App);
+  vi.useFakeTimers();
 
-  const stage = screen.getByTestId("chaos-stage");
-  stage.getBoundingClientRect = () => ({
-    width: 400,
-    height: 300,
-    left: 0,
-    top: 0,
-    right: 400,
-    bottom: 300,
-    x: 0,
-    y: 0,
-    toJSON: () => ({}),
-  });
+  try {
+    render(App);
 
-  const before = stage.style.getPropertyValue("--chaos-hue");
+    const stage = screen.getByTestId("chaos-stage");
+    stage.getBoundingClientRect = () => ({
+      width: 400,
+      height: 300,
+      left: 0,
+      top: 0,
+      right: 400,
+      bottom: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
 
-  await fireEvent.pointerMove(window, { clientX: 123, clientY: 45 });
+    const before = stage.style.getPropertyValue("--chaos-hue");
 
-  expect(stage.style.getPropertyValue("--chaos-hue")).not.toBe(before);
-  expect(stage.style.getPropertyValue("--pointer-x")).not.toBe("");
-  expect(stage.style.getPropertyValue("--pointer-y")).not.toBe("");
+    await fireEvent.pointerMove(window, { clientX: 123, clientY: 45 });
+    expect(stage.style.getPropertyValue("--chaos-hue")).toBe(before);
+
+    await vi.advanceTimersByTimeAsync(16);
+
+    const firstUpdate = stage.style.getPropertyValue("--chaos-hue");
+    expect(firstUpdate).not.toBe(before);
+    expect(stage.style.getPropertyValue("--pointer-x")).not.toBe("");
+    expect(stage.style.getPropertyValue("--pointer-y")).not.toBe("");
+
+    await fireEvent.pointerMove(window, { clientX: 124, clientY: 45 });
+    await fireEvent.pointerMove(window, { clientX: 125, clientY: 45 });
+
+    await vi.advanceTimersByTimeAsync(8);
+    expect(stage.style.getPropertyValue("--chaos-hue")).toBe(firstUpdate);
+
+    await vi.advanceTimersByTimeAsync(8);
+    expect(stage.style.getPropertyValue("--chaos-hue")).not.toBe(firstUpdate);
+  } finally {
+    vi.useRealTimers();
+  }
 });
