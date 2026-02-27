@@ -694,6 +694,13 @@
         <a href="#top">misleading exit</a>
       </div>
     </section>
+
+    <section class="panel panel--footer">
+      <p class="label">Footer contamination</p>
+      <p class="footer-credit">
+        made by <a href="https://github.com/grantbirki">grantbirki</a> with c o n s u m p t i o n
+      </p>
+    </section>
     </main>
   </div>
 {/if}

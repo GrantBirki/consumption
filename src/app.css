@@ -687,6 +687,25 @@ a {
   margin-top: 2rem;
 }
 
+.panel--footer {
+  grid-column: 1 / -1;
+  margin-top: 6rem;
+  text-align: center;
+}
+
+.footer-credit {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.4vw, 1.7rem);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.footer-credit a {
+  color: #00ffea;
+  text-decoration: underline wavy #fff400 2px;
+  text-underline-offset: 0.2em;
+}
+
 .artwork[data-layout-mode="stack"] .panel--hero {
   grid-column: 1 / span 10;
 }

@@ -11,6 +11,11 @@ test("App renders the maximalist artwork shell", () => {
   expect(screen.getAllByText("C O N S U M P T I O N")).toHaveLength(7);
   expect(screen.getByText(/browser abuse engine/i)).toBeInTheDocument();
   expect(screen.getByText(/counterfeit comfort layer/i)).toBeInTheDocument();
+  expect(screen.getByText(/made by/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "grantbirki" })).toHaveAttribute(
+    "href",
+    "https://github.com/grantbirki"
+  );
   expect(container.querySelectorAll(".floater__image")).toHaveLength(5);
   expect(container.querySelectorAll(".window")).toHaveLength(2);
   expect(document.title).toBe("consumption");
