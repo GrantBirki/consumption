@@ -62,3 +62,25 @@ test("buildStatusReadouts formats the fake diagnostics", () => {
   expect(readouts[1]).toContain("flash state detonating");
   expect(readouts[2]).toContain("scroll contamination 50%");
 });
+
+test("buildScrollState reports deep contamination label near the page end", () => {
+  const state = buildScrollState(900, 100, 1000);
+
+  expect(state.ratio).toBe(1);
+  expect(state.label).toBe("deep in the mess");
+});
+
+test("buildStatusReadouts uses simmering flash copy when flash mode is off", () => {
+  const readouts = buildStatusReadouts({
+    energy: 0.1,
+    scatter: 10,
+    wobble: 4,
+    speed: 5,
+    flash: false,
+    scrollRatio: 0.25,
+    phase: -1,
+  });
+
+  expect(readouts[1]).toContain("flash state simmering");
+  expect(readouts[1]).toContain("collapse gala");
+});

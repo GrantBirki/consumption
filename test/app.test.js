@@ -248,3 +248,154 @@ test("App interactions run without console errors or warnings", async () => {
     vi.useRealTimers();
   }
 });
+
+test("App ignores malformed pointer events without toggling pointer-active mode", async () => {
+  vi.useFakeTimers();
+
+  try {
+    render(App);
+    const stage = screen.getByTestId("chaos-stage");
+    const baselineHue = stage.style.getPropertyValue("--chaos-hue");
+
+    const malformedPointerEvent = new Event("pointermove");
+    Object.defineProperty(malformedPointerEvent, "clientX", { value: Number.NaN });
+    Object.defineProperty(malformedPointerEvent, "clientY", { value: Number.NaN });
+    window.dispatchEvent(malformedPointerEvent);
+
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(stage.dataset.pointerActive).toBe("off");
+    expect(stage.style.getPropertyValue("--chaos-hue")).toBe(baselineHue);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("App falls back to timeout-driven animation frames when requestAnimationFrame is unavailable", async () => {
+  vi.useFakeTimers();
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+
+  try {
+    // Force the runtime fallback branch used in constrained browser environments.
+    globalThis.requestAnimationFrame = undefined;
+    globalThis.cancelAnimationFrame = undefined;
+
+    render(App);
+
+    const stage = screen.getByTestId("chaos-stage");
+    stage.getBoundingClientRect = () => ({
+      width: 400,
+      height: 300,
+      left: 0,
+      top: 0,
+      right: 400,
+      bottom: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const before = stage.style.getPropertyValue("--chaos-hue");
+
+    await fireEvent.pointerMove(window, { clientX: 123, clientY: 45 });
+    await vi.advanceTimersByTimeAsync(120);
+
+    expect(stage.style.getPropertyValue("--chaos-hue")).not.toBe(before);
+  } finally {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    vi.useRealTimers();
+  }
+});
+
+test("App ignores extra clicks while BSOD is active", async () => {
+  vi.useFakeTimers();
+
+  try {
+    render(App);
+
+    for (let index = 0; index < 10; index += 1) {
+      await fireEvent.click(window);
+    }
+
+    expect(screen.getByTestId("bsod-screen")).toBeInTheDocument();
+
+    for (let index = 0; index < 5; index += 1) {
+      await fireEvent.click(window);
+    }
+
+    await vi.advanceTimersByTimeAsync(8000);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(screen.queryByTestId("bsod-screen")).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId("sticky-head")).toHaveLength(0);
+
+    await fireEvent.click(window);
+    expect(screen.getAllByTestId("sticky-head")).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("App exits BSOD cleanly even if scrollTo throws outside jsdom user agents", async () => {
+  vi.useFakeTimers();
+  const userAgentSpy = vi.spyOn(globalThis.navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0");
+  const originalScrollTo = globalThis.scrollTo;
+  const scrollToSpy = vi.fn(() => {
+    throw new Error("scrollTo unsupported");
+  });
+
+  try {
+    globalThis.scrollTo = scrollToSpy;
+    render(App);
+
+    for (let index = 0; index < 10; index += 1) {
+      await fireEvent.click(window);
+    }
+
+    expect(screen.getByTestId("bsod-screen")).toBeInTheDocument();
+
+    await vi.advanceTimersByTimeAsync(8000);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(scrollToSpy).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("bsod-screen")).not.toBeInTheDocument();
+    expect(screen.getByTestId("chaos-stage")).toBeInTheDocument();
+  } finally {
+    globalThis.scrollTo = originalScrollTo;
+    userAgentSpy.mockRestore();
+    vi.useRealTimers();
+  }
+});
+
+test("App immediately resets pointer-active mode on pointerleave", async () => {
+  vi.useFakeTimers();
+
+  try {
+    render(App);
+
+    const stage = screen.getByTestId("chaos-stage");
+    stage.getBoundingClientRect = () => ({
+      width: 400,
+      height: 300,
+      left: 0,
+      top: 0,
+      right: 400,
+      bottom: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    await fireEvent.pointerMove(window, { clientX: 140, clientY: 90 });
+    expect(stage.dataset.pointerActive).toBe("on");
+
+    await fireEvent.pointerLeave(window);
+    expect(stage.dataset.pointerActive).toBe("off");
+  } finally {
+    vi.useRealTimers();
+  }
+});
