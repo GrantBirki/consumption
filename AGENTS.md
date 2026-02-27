@@ -1,4 +1,4 @@
-# consumption.horse agent notes
+# consumption agent notes
 
 ## Design direction
 
@@ -9,4 +9,3 @@
 - The spaced text `C O N S U M P T I O N` should remain a major background element of the composition.
 - Motion, overlap, and visual noise are encouraged, but the implementation must stay free of console errors and avoid browser-crashing performance problems.
 - When adding interaction logic, prefer extracting pure functions that can be unit tested.
-

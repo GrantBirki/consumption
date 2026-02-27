@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
 
-  import consumptionImage from "../consumption.png";
+  import consumptionImage from "./assets/consumption.png";
   import {
     applyPointerMove,
     buildChaosVars,
@@ -17,7 +17,7 @@
     getLayoutMode,
   } from "./lib/badness.js";
 
-  const siteName = "consumption.horse";
+  const siteName = "consumption";
   const heroWordmark = "c o n s u m p t i o n";
   const description =
     "A maximalist cursor-reactive web artwork that scrambles the palette with every movement.";

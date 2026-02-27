@@ -12,7 +12,7 @@ test("App renders the maximalist artwork shell", () => {
   expect(screen.getByText(/counterfeit comfort layer/i)).toBeInTheDocument();
   expect(container.querySelectorAll(".floater__image")).toHaveLength(7);
   expect(container.querySelectorAll(".window")).toHaveLength(3);
-  expect(document.title).toBe("consumption.horse");
+  expect(document.title).toBe("consumption");
 });
 
 test("App updates chaos CSS variables on pointer movement", async () => {
