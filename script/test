@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Vitest runs the JS entrypoint test and the Svelte component smoke test.
+./node_modules/.bin/vitest run --coverage
