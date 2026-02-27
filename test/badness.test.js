@@ -38,6 +38,14 @@ test("buildScrollState normalizes scroll ratios and sabotage values", () => {
   expect(state.label).toBe("mid-spiral");
 });
 
+test("buildScrollState safely clamps negative or tiny document metrics", () => {
+  const state = buildScrollState(-200, 0, 0);
+
+  expect(state.ratio).toBe(0);
+  expect(state.shift).toBe(-60);
+  expect(state.label).toBe("freshly compromised");
+});
+
 test("buildStatusReadouts formats the fake diagnostics", () => {
   const readouts = buildStatusReadouts({
     energy: 0.42,

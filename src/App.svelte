@@ -16,17 +16,12 @@
     corruptPhrase,
     getLayoutMode,
   } from "./lib/badness.js";
+  import { getRuntimeTuning } from "./lib/perf.js";
 
   const siteName = "consumption";
   const heroWordmark = "c o n s u m p t i o n";
   const description =
     "A maximalist cursor-reactive web artwork that scrambles the palette with every movement.";
-  const POINTER_COOLDOWN_MS = 10;
-  const PRESENTATION_COOLDOWN_MS = 110;
-  const LAYOUT_INTERVAL_MS = 2600;
-  const LAYOUT_IDLE_RESET_MS = 180;
-  const FLASH_INTERVAL_MS = 5400;
-  const FLASH_DURATION_MS = 420;
   const wallpaperRows = Array.from({ length: 9 }, () => heroWordmark.toUpperCase());
   const marqueeBursts = [
     "retina tax in progress / chromatic debt increasing / cursor panic live",
@@ -109,11 +104,14 @@
   let decoyHeading = corruptPhrase("welcome to the counterfeit comfort layer", 0.55, 1);
 
   onMount(() => {
+    const tuning = getRuntimeTuning();
+
     let chaos = createChaosState();
     let lastPoint = null;
     let pendingPointerMove = null;
     let frameHandle = 0;
     let lastTime = globalThis.performance?.now?.() ?? Date.now();
+    let lastVisualUpdateAt = lastTime;
     let loopActive = false;
     let nextPointerAt = 0;
     let currentSpeed = 0;
@@ -121,6 +119,8 @@
     let flashTimeoutHandle = 0;
     let lastPointerActivityAt = -Infinity;
     let nextLayoutShiftAt = Infinity;
+    let scrollFrameHandle = 0;
+    let scrollQueued = false;
 
     const requestFrame =
       globalThis.requestAnimationFrame ??
@@ -130,7 +130,7 @@
     const cycleLayoutMode = (now) => {
       layoutStep += 1;
       layoutMode = getLayoutMode(layoutStep);
-      nextLayoutShiftAt = now + LAYOUT_INTERVAL_MS;
+      nextLayoutShiftAt = now + tuning.layoutIntervalMs;
       refreshPresentation(now, true);
       applyStageVars();
     };
@@ -153,7 +153,6 @@
       if (loopActive) return;
 
       loopActive = true;
-      lastTime = globalThis.performance?.now?.() ?? Date.now();
       frameHandle = requestFrame(step);
     };
 
@@ -186,7 +185,7 @@
         Math.min(1, intensity + (flashMode ? 0.3 : 0)),
         layoutStep + 5
       );
-      nextPresentationAt = now + PRESENTATION_COOLDOWN_MS;
+      nextPresentationAt = now + tuning.presentationCooldownMs;
     };
 
     const getBounds = () => {
@@ -222,6 +221,10 @@
     };
 
     const handlePointerMove = (event) => {
+      if (!Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) {
+        return;
+      }
+
       const now = globalThis.performance?.now?.() ?? Date.now();
       const bounds = getBounds();
       pendingPointerMove = {
@@ -232,8 +235,8 @@
         bounds,
       };
 
-      if (now - lastPointerActivityAt > LAYOUT_IDLE_RESET_MS) {
-        nextLayoutShiftAt = now + LAYOUT_INTERVAL_MS;
+      if (now - lastPointerActivityAt > tuning.layoutIdleResetMs) {
+        nextLayoutShiftAt = now + tuning.layoutIntervalMs;
       } else if (now >= nextLayoutShiftAt) {
         cycleLayoutMode(now);
       }
@@ -243,7 +246,14 @@
     };
 
     const handleScroll = () => {
-      updateScrollState(true);
+      if (scrollQueued) return;
+
+      scrollQueued = true;
+      scrollFrameHandle = requestFrame(() => {
+        scrollQueued = false;
+        scrollFrameHandle = 0;
+        updateScrollState(true);
+      });
     };
 
     const resetPointer = () => {
@@ -262,12 +272,20 @@
         flashMode = false;
         refreshPresentation(globalThis.performance?.now?.() ?? Date.now(), true);
         applyStageVars();
-      }, FLASH_DURATION_MS);
+      }, tuning.flashDurationMs);
     };
 
     const step = (timestamp) => {
       loopActive = false;
       const now = Number.isFinite(timestamp) ? timestamp : Date.now();
+      if (tuning.minFrameIntervalMs > 0 && now - lastVisualUpdateAt < tuning.minFrameIntervalMs) {
+        if (pendingPointerMove || !isChaosSettled(chaos)) {
+          scheduleStep();
+        }
+        return;
+      }
+
+      lastVisualUpdateAt = now;
       const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
       let needsAnotherFrame = false;
@@ -288,7 +306,7 @@
           bounds: pendingPointerMove.bounds,
         });
         pendingPointerMove = null;
-        nextPointerAt = now + POINTER_COOLDOWN_MS;
+        nextPointerAt = now + tuning.pointerCooldownMs;
       } else if (pendingPointerMove) {
         needsAnotherFrame = true;
       }
@@ -309,7 +327,7 @@
 
     const flashInterval = globalThis.setInterval(() => {
       triggerFlash();
-    }, FLASH_INTERVAL_MS);
+    }, tuning.flashIntervalMs);
 
     updateScrollState(true);
     applyStageVars();
@@ -321,6 +339,7 @@
 
     return () => {
       cancelFrame(frameHandle);
+      cancelFrame(scrollFrameHandle);
       globalThis.clearInterval(flashInterval);
       globalThis.clearTimeout(flashTimeoutHandle);
       globalThis.removeEventListener("pointermove", handlePointerMove);
@@ -342,6 +361,7 @@
   data-testid="chaos-stage"
   data-layout-mode={layoutMode.id}
   data-flash-mode={flashMode ? "on" : "off"}
+  data-performance-mode="potato"
 >
   <div class="artwork__wash artwork__wash--a"></div>
   <div class="artwork__wash artwork__wash--b"></div>

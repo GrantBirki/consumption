@@ -93,6 +93,41 @@ test("buildChaosVars returns CSS custom properties without NaN values", () => {
   }
 });
 
+test("chaos math self-heals malformed numeric input", () => {
+  const malformedState = {
+    ...createChaosState(),
+    hue: Number.POSITIVE_INFINITY,
+    targetHue: Number.NaN,
+    energy: Number.NaN,
+    targetEnergy: Number.NaN,
+    scatter: Number.NaN,
+    targetScatter: Number.NaN,
+    tiltX: Number.NaN,
+    targetTiltX: Number.NaN,
+    tiltY: Number.NaN,
+    targetTiltY: Number.NaN,
+    wobble: Number.NaN,
+    targetWobble: Number.NaN,
+    pointerX: Number.NaN,
+    pointerY: Number.NaN,
+  };
+
+  const moved = applyPointerMove(malformedState, {
+    point: { x: Number.NaN, y: Number.NaN },
+    delta: { x: Number.NaN, y: Number.NaN },
+    bounds: { width: Number.NaN, height: Number.NaN },
+  });
+  const settled = tickChaos(moved, Number.NaN);
+
+  for (const value of Object.values(settled)) {
+    expect(Number.isFinite(value)).toBe(true);
+  }
+
+  for (const value of Object.values(buildChaosVars(settled))) {
+    expect(value.includes("NaN")).toBe(false);
+  }
+});
+
 test("wrapHue keeps angles inside the CSS hue circle", () => {
   expect(wrapHue(370)).toBe(10);
   expect(wrapHue(-30)).toBe(330);

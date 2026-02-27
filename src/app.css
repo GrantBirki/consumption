@@ -116,6 +116,25 @@ a {
     hue-rotate(18deg);
 }
 
+.artwork[data-performance-mode="potato"] {
+  filter:
+    saturate(calc(1.45 + var(--chaos-energy) * 1.1))
+    contrast(calc(1.06 + var(--chaos-energy) * 0.2));
+}
+
+.artwork[data-performance-mode="potato"]::after {
+  opacity: calc(0.1 + var(--chaos-energy) * 0.18);
+  mix-blend-mode: screen;
+  filter: blur(calc(var(--chaos-blur) * 0.35));
+}
+
+.artwork[data-performance-mode="potato"][data-flash-mode="on"] {
+  filter:
+    saturate(calc(2.05 + var(--chaos-energy) * 1.35))
+    contrast(1.18)
+    hue-rotate(12deg);
+}
+
 .artwork__wash,
 .artwork__grain,
 .wallpaper,
@@ -412,6 +431,13 @@ a {
     drop-shadow(0 0 22px hsl(var(--chaos-accent) 100% 62% / 0.8));
 }
 
+.artwork[data-performance-mode="potato"] .floater {
+  filter:
+    hue-rotate(var(--chaos-hue))
+    saturate(calc(1.75 + var(--chaos-energy) * 0.75))
+    contrast(1.08);
+}
+
 .floater__image {
   display: block;
   width: 100%;
@@ -456,6 +482,13 @@ a {
       0
     );
   backdrop-filter: blur(calc(6px + var(--chaos-blur)));
+}
+
+.artwork[data-performance-mode="potato"] .panel {
+  box-shadow:
+    0 0 0 4px rgba(0, 0, 0, 0.32),
+    0 0 20px hsl(var(--chaos-hue) 100% 50% / 0.28);
+  backdrop-filter: none;
 }
 
 .panel::before {
